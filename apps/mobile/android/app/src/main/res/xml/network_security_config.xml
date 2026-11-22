@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Users may run self-signed HTTPS on home labs; the web layer pins the
+     server URL and all traffic is HTTPS by default. Cleartext stays blocked. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

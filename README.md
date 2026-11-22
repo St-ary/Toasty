@@ -10,7 +10,7 @@ ciphertext, so even a fully compromised server reveals nothing without your
 master password.
 
 This repository is the vault: the API server, the web vault, the shared crypto,
-and the Docker setup to run it.
+the mobile apps, and the Docker setup to run it.
 
 ## Quickstart
 
@@ -39,6 +39,7 @@ is in [docs/self-hosting.md](docs/self-hosting.md).
 | --- | --- |
 | `apps/server` | Node API (`@toasty/server`) — also serves the built web vault in production |
 | `apps/web` | Web vault (`@toasty/web`) — the vault's browser interface |
+| `apps/mobile` | iOS and Android apps (WebView shells + native autofill) |
 | `packages/crypto` | Shared zero-knowledge crypto (`@toasty/crypto`) |
 | `docs/` | Self-hosting, API, and security documentation |
 | `docker/` | Dockerfile and Caddyfile |

@@ -18,11 +18,11 @@ docker-compose.override.yml
 # Not part of the vault self-hosting package:
 # - infra/hosted/  the owner's own hosted instances (toasty.stary.lol, vault.stary.lol)
 # - apps/site/     the toasty.stary.lol guide website source, deployed separately
-# - apps/extension/, apps/mobile/  clients, distributed separately from this repo
+# - apps/extension/, docs/extension.md  client, distributed separately from this repo
+# - docs/mobile.md  covered by apps/mobile/README.md
 infra/hosted/
 apps/site/
 apps/extension/
-apps/mobile/
 docs/extension.md
 docs/mobile.md
 

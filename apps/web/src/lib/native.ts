@@ -14,7 +14,7 @@ interface RawIosBridge {
 }
 
 export function isNativeApp(): boolean {
-  return capacitor() !== null || rawBridge() !== null;
+  return capacitor() !== null || rawBridge() !== null || iosBridge() !== null;
 }
 
 function capacitor(): CapacitorGlobal | null {
