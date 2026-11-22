@@ -1,0 +1,66 @@
+name: Toasty
+options:
+  bundleIdPrefix: lol.stary
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+targets:
+  Toasty:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/App
+    info:
+      path: App/App/Info.plist
+      properties:
+        CFBundleDisplayName: Toasty
+        UILaunchScreen: {}
+        UIRequiredDeviceCapabilities: [arm64]
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+    entitlements:
+      path: App/App/Toasty.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.lol.stary.toasty
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)lol.stary.toasty.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lol.stary.toasty
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+
+  AutofillExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: AutofillExtension
+      - path: App/App/VaultCache.swift
+    info:
+      path: AutofillExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Toasty Autofill
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.authentication-services-credential-provider-ui
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).CredentialProviderViewController
+    entitlements:
+      path: AutofillExtension/AutofillExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.lol.stary.toasty
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)lol.stary.toasty.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lol.stary.toasty.autofill
+        SWIFT_VERSION: "5.0"
+
+schemes:
+  Toasty:
+    build:
+      targets:
+        Toasty: all
+    archive:
+      config: Release

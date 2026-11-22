@@ -1,0 +1,75 @@
+# Toasty self-hosting stack: Postgres + app (API + web vault) + Caddy (automatic TLS).
+# Usage: cp .env.example .env, edit values, then `docker compose up -d`.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-toasty}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-toasty}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    image: ${TOASTY_IMAGE:-ghcr.io/stary/toasty}:${TOASTY_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: "8787"
+      HOST: "0.0.0.0"
+      DATABASE_URL: postgres://${POSTGRES_USER:-toasty}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-toasty}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://toasty.example.com}
+      STATIC_DIR: /app/public
+      MIGRATE_ON_BOOT: "true"
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      UPDATE_CHECK: ${UPDATE_CHECK:-true}
+      UPDATE_MANIFEST_URL: ${UPDATE_MANIFEST_URL:-https://toasty.stary.lol/versions.json}
+      UPDATER_URL: ${UPDATER_URL:-http://updater:8090}
+
+  # Opt-in one-click updater (enable with: docker compose --profile updater up -d).
+  # It holds the Docker socket so it can switch the app container between
+  # versions from the vault's Settings page. It runs as root for socket access;
+  # the app container itself stays unprivileged. Only enable it on hosts where
+  # that trade-off is acceptable.
+  updater:
+    profiles: ["updater"]
+    image: ${TOASTY_IMAGE:-ghcr.io/stary/toasty}:${TOASTY_VERSION:-latest}
+    restart: unless-stopped
+    user: "0:0"
+    command: ["node", "dist/updater.js"]
+    environment:
+      TARGET_CONTAINER: ${UPDATER_TARGET_CONTAINER:-toasty-app-1}
+      UPDATER_PORT: "8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  caddy_data:

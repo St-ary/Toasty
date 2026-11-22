@@ -1,0 +1,22 @@
+# Toasty — Caddyfile
+#
+# Caddy terminates TLS automatically (Let's Encrypt) for every hostname below:
+# certificates are issued and renewed on their own once DNS points here and
+# ports 80/443 are reachable.
+#
+# Self-hosters: replace the hostnames with your own domain and keep a single
+# site block, e.g. "toasty.example.com { ... }". `app` is the app service from
+# docker-compose.yml (API + web vault on port 8787).
+#
+# For a plain-HTTP LAN setup without TLS, see "Plain HTTP on a LAN" in
+# docs/self-hosting.md instead of using this file.
+
+toasty.stary.lol {
+	encode zstd gzip
+	reverse_proxy app:8787
+}
+
+vault.stary.lol {
+	encode zstd gzip
+	reverse_proxy app:8787
+}
