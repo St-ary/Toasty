@@ -662,6 +662,13 @@ input[type="range"] {
   margin-top: 1px;
 }
 
+.auth-vault-line {
+  margin: 10px 0 0;
+  font-size: 11px;
+  text-align: center;
+  word-break: break-all;
+}
+
 .recovery-block {
   display: flex;
   align-items: center;

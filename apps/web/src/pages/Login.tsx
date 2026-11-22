@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { EyeIcon, EyeOffIcon, LockIcon, MoonIcon, ShieldCheckIcon, SunIcon } from "@toasty/icons";
-import { ApiError } from "../lib/api";
+import { ApiError, getServerUrl } from "../lib/api";
 import type { ResolvedTheme } from "../lib/theme";
 import { useVault } from "../state/vault";
 
@@ -21,9 +21,10 @@ function loginErrorMessage(error: unknown): string {
 export interface LoginProps {
   resolvedTheme: ResolvedTheme;
   onToggleTheme: () => void;
+  onChangeVault?: () => void;
 }
 
-export function Login({ resolvedTheme, onToggleTheme }: LoginProps): JSX.Element {
+export function Login({ resolvedTheme, onToggleTheme, onChangeVault }: LoginProps): JSX.Element {
   const vault = useVault();
   const [email, setEmail] = useState(() => vault.email ?? "");
   const [masterPassword, setMasterPassword] = useState("");
@@ -163,6 +164,14 @@ export function Login({ resolvedTheme, onToggleTheme }: LoginProps): JSX.Element
             <ShieldCheckIcon size={15} />
             <span>Zero-knowledge &mdash; your master password never leaves this device.</span>
           </p>
+          {onChangeVault !== undefined ? (
+            <>
+              <p className="muted auth-vault-line">Connected to {getServerUrl()}</p>
+              <button type="button" className="text-btn" onClick={onChangeVault}>
+                Change vault
+              </button>
+            </>
+          ) : null}
         </form>
       </div>
     </div>

@@ -27,6 +27,7 @@ export function App(): JSX.Element {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [serverReady, setServerReady] = useState<boolean>(() => !isNativeApp() || getServerUrl().length > 0);
+  const [serverEpoch, setServerEpoch] = useState(0);
 
   useEffect(() => {
     const onHashChange = (): void => setRoute(parseRoute());
@@ -48,7 +49,7 @@ export function App(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [vault.status]);
+  }, [vault.status, serverEpoch]);
 
   useEffect(() => {
     setResolvedTheme(resolveTheme(theme));
@@ -98,8 +99,21 @@ export function App(): JSX.Element {
     setThemePreference(next);
   }, [theme]);
 
+  const changeVault = useCallback((): void => {
+    void vault.signOut().finally(() => {
+      setServerReady(false);
+    });
+  }, [vault]);
+
   if (!serverReady) {
-    return <ServerSetup onDone={() => setServerReady(true)} />;
+    return (
+      <ServerSetup
+        onDone={() => {
+          setServerReady(true);
+          setServerEpoch((epoch) => epoch + 1);
+        }}
+      />
+    );
   }
 
   if (recoveryCode !== null) {
@@ -145,5 +159,11 @@ export function App(): JSX.Element {
     );
   }
 
-  return <Login resolvedTheme={resolvedTheme} onToggleTheme={toggleTheme} />;
+  return (
+    <Login
+      resolvedTheme={resolvedTheme}
+      onToggleTheme={toggleTheme}
+      onChangeVault={isNativeApp() ? changeVault : undefined}
+    />
+  );
 }
