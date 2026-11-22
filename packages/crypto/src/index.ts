@@ -638,14 +638,97 @@ export function generateTotpSecret(byteLength = 20): string {
   return base32Encode(randomBytes(byteLength));
 }
 
+export type TotpAlgorithm = "SHA1" | "SHA256" | "SHA512";
+
+export interface TotpSettings {
+  secret: string;
+  digits: number;
+  period: number;
+  algorithm: TotpAlgorithm;
+}
+
+const DEFAULT_TOTP: TotpSettings = { secret: "", digits: 6, period: 30, algorithm: "SHA1" };
+
+function otpauthParam(params: URLSearchParams, name: string): string | null {
+  const lower = name.toLowerCase();
+  for (const [key, value] of params) {
+    if (key.toLowerCase() === lower) return value;
+  }
+  return null;
+}
+
+/**
+ * Accepts every form a TOTP secret comes in: an otpauth:// URI (QR export,
+ * password-manager export, "copy link" buttons) or a raw base32 key with
+ * any mix of spaces, dashes, and casing. Returns null when unusable.
+ */
+export function parseTotpSettings(value: string): TotpSettings | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (/^otpauth:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      const secret = otpauthParam(url.searchParams, "secret");
+      if (secret === null) return null;
+      const settings = parseTotpSettings(secret);
+      if (settings === null) return null;
+      const digits = Number.parseInt(otpauthParam(url.searchParams, "digits") ?? "", 10);
+      const period = Number.parseInt(otpauthParam(url.searchParams, "period") ?? "", 10);
+      const algorithm = (otpauthParam(url.searchParams, "algorithm") ?? "").toUpperCase().replace(/-/g, "");
+      return {
+        secret: settings.secret,
+        digits: digits >= 6 && digits <= 8 ? digits : settings.digits,
+        period: period > 0 ? period : settings.period,
+        algorithm: algorithm === "SHA256" || algorithm === "SHA512" ? algorithm : "SHA1",
+      };
+    } catch {
+      return null;
+    }
+  }
+  const secret = trimmed.replace(/[\s-]+/g, "").toUpperCase();
+  try {
+    base32Decode(secret);
+  } catch {
+    return null;
+  }
+  return { ...DEFAULT_TOTP, secret };
+}
+
+/**
+ * Canonical storage form for a user-supplied secret: otpauth URIs are kept
+ * intact (they carry digits/period/algorithm), raw keys are normalized to
+ * clean base32. Returns null for input that cannot produce codes.
+ */
+export function normalizeTotpSecret(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (/^otpauth:\/\//i.test(trimmed)) {
+    return parseTotpSettings(trimmed) === null ? null : trimmed;
+  }
+  const settings = parseTotpSettings(trimmed);
+  return settings === null ? null : settings.secret;
+}
+
+const HMAC_HASH: Record<TotpAlgorithm, string> = {
+  SHA1: "SHA-1",
+  SHA256: "SHA-256",
+  SHA512: "SHA-512",
+};
+
 export async function computeTotp(
-  secretBase32: string,
+  secretOrUri: string,
   timestampMs: number = Date.now(),
-  period = 30,
-  digits = 6,
+  period?: number,
+  digits?: number,
+  algorithm?: TotpAlgorithm,
 ): Promise<string> {
-  const key = base32Decode(secretBase32);
-  const counter = Math.floor(timestampMs / 1000 / period);
+  const settings = parseTotpSettings(secretOrUri);
+  if (settings === null) throw new Error("Invalid TOTP secret");
+  const usePeriod = period ?? settings.period;
+  const useDigits = digits ?? settings.digits;
+  const useAlgorithm = algorithm ?? settings.algorithm;
+  const key = base32Decode(settings.secret);
+  const counter = Math.floor(timestampMs / 1000 / usePeriod);
   const counterBytes = new Uint8Array(8);
   let remaining = counter;
   for (let i = 7; i >= 0; i--) {
@@ -655,7 +738,7 @@ export async function computeTotp(
   const hmacKey = await subtle().importKey(
     "raw",
     bufferSource(key),
-    { name: "HMAC", hash: "SHA-1" },
+    { name: "HMAC", hash: HMAC_HASH[useAlgorithm] },
     false,
     ["sign"],
   );
@@ -666,8 +749,8 @@ export async function computeTotp(
       (signature[offset + 1]! << 16) |
       (signature[offset + 2]! << 8) |
       signature[offset + 3]!) %
-    10 ** digits;
-  return code.toString().padStart(digits, "0");
+    10 ** useDigits;
+  return code.toString().padStart(useDigits, "0");
 }
 
 export function totpSecondsRemaining(period = 30, nowMs: number = Date.now()): number {

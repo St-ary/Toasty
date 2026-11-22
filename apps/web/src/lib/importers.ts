@@ -1,4 +1,5 @@
 import type { CardItem, IdentityItem, ItemType, LoginItem, NoteItem } from "@toasty/crypto";
+import { normalizeTotpSecret } from "@toasty/crypto";
 
 export interface ImportedItem {
   type: ItemType;
@@ -10,17 +11,8 @@ function clean(value: unknown): string {
 }
 
 function totpSecret(value: string): string | undefined {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return undefined;
-  if (trimmed.startsWith("otpauth://")) {
-    try {
-      const secret = new URL(trimmed).searchParams.get("secret");
-      if (secret !== null && secret.length > 0) return secret.toUpperCase();
-    } catch {
-      return undefined;
-    }
-  }
-  return trimmed.toUpperCase();
+  if (typeof value !== "string") return undefined;
+  return normalizeTotpSecret(value) ?? undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

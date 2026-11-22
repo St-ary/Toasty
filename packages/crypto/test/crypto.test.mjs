@@ -15,6 +15,8 @@ import {
   generateTotpSecret,
   computeTotp,
   totpSecondsRemaining,
+  parseTotpSettings,
+  normalizeTotpSecret,
   buildOtpauthUri,
   base32Encode,
   base32Decode,
@@ -352,4 +354,46 @@ test("folder entries and folderId round trip", async () => {
   };
   const passkeyRecord = await encryptItem(account.vaultKey, "item-2", passkey);
   assert.deepEqual(await decryptItem(account.vaultKey, "item-2", passkeyRecord), passkey);
+});
+
+test("TOTP parser accepts otpauth URIs", () => {
+  const settings = parseTotpSettings(
+    "otpauth://totp/Discord:toast?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Discord&algorithm=SHA256&digits=8&period=60",
+  );
+  assert.ok(settings);
+  assert.equal(settings.secret, "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP");
+  assert.equal(settings.digits, 8);
+  assert.equal(settings.period, 60);
+  assert.equal(settings.algorithm, "SHA256");
+
+  // keys survived an old save that uppercased the whole URI
+  const mangled = parseTotpSettings(
+    "OTPAUTH://TOTP/DISCORD:TOAST?SECRET=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&ISSUER=DISCORD",
+  );
+  assert.ok(mangled);
+  assert.equal(mangled.secret, "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP");
+});
+
+test("TOTP parser cleans messy base32 keys", () => {
+  const settings = parseTotpSettings("jbsw y3dp-ehpk 3pxp jbsw y3dp ehpk 3pxp");
+  assert.ok(settings);
+  assert.equal(settings.secret, "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP");
+  assert.equal(settings.digits, 6);
+  assert.equal(settings.period, 30);
+
+  assert.equal(parseTotpSettings(""), null);
+  assert.equal(parseTotpSettings("not base32!!"), null);
+  assert.equal(parseTotpSettings("otpauth://totp/x?nosecret=1"), null);
+});
+
+test("TOTP normalize keeps URIs and cleans keys", async () => {
+  const uri = "otpauth://totp/X:me?secret=JBSWY3DPEHPK3PXP&digits=8";
+  assert.equal(normalizeTotpSecret(uri), uri);
+  assert.equal(normalizeTotpSecret("jbsw y3dp ehpk 3pxp"), "JBSWY3DPEHPK3PXP");
+  assert.equal(normalizeTotpSecret("garbage!!"), null);
+
+  // codes work the same whether the stored value is a URI or a bare key
+  const uriCode = await computeTotp("otpauth://totp/X:me?secret=JBSWY3DPEHPK3PXP", 59000);
+  const keyCode = await computeTotp("JBSWY3DPEHPK3PXP", 59000);
+  assert.equal(uriCode, keyCode);
 });

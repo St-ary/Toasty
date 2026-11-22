@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type {
   ApiItem,
   CardItem,
@@ -11,12 +11,13 @@ import type {
   PasskeyItem,
   SshItem,
 } from "@toasty/crypto";
-import { generatePassword, generateTotpSecret } from "@toasty/crypto";
+import { generatePassword, generateTotpSecret, normalizeTotpSecret } from "@toasty/crypto";
 import {
   CheckIcon,
   DicesIcon,
   EyeIcon,
   EyeOffIcon,
+  PencilIcon,
   PlusIcon,
   SparkIcon,
   TrashIcon,
@@ -26,6 +27,8 @@ import { CopyButton } from "./CopyButton";
 import { StrengthMeter } from "./StrengthMeter";
 import { TotpRow } from "./Totp";
 import { ITEM_TYPE_META, maskSecret } from "../lib/items";
+
+const EditorReadOnly = createContext(false);
 
 interface Draft {
   name: string;
@@ -225,8 +228,8 @@ function buildPayload(type: ItemType, draft: Draft): ItemPayload {
         .map((line) => line.trim())
         .filter((line) => line.length > 0);
       if (urls.length > 0) payload.urls = urls;
-      const totp = draft.totp.replace(/\s/g, "").toUpperCase();
-      if (totp.length > 0) payload.totp = totp;
+      const totp = normalizeTotpSecret(draft.totp);
+      if (totp !== null && totp.length > 0) payload.totp = totp;
       if (draft.notes.trim().length > 0) payload.notes = draft.notes;
       const customFields = draft.customFields
         .map((field) => ({ ...field, name: field.name.trim() }))
@@ -318,6 +321,7 @@ interface FieldProps {
 }
 
 function Field({ label, value, onChange, mono = false, placeholder }: FieldProps): JSX.Element {
+  const readOnly = useContext(EditorReadOnly);
   return (
     <label className="field">
       <span className="label">{label}</span>
@@ -326,6 +330,7 @@ function Field({ label, value, onChange, mono = false, placeholder }: FieldProps
         type="text"
         value={value}
         placeholder={placeholder}
+        readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
@@ -346,6 +351,7 @@ function SecretField({
   placeholder?: string;
 }): JSX.Element {
   const [visible, setVisible] = useState(!hidden);
+  const readOnly = useContext(EditorReadOnly);
   return (
     <div className="field">
       <span className="label">{label}</span>
@@ -355,6 +361,7 @@ function SecretField({
           type={visible ? "text" : "password"}
           value={value}
           placeholder={placeholder}
+          readOnly={readOnly}
           onChange={(event) => onChange(event.target.value)}
         />
         <button
@@ -404,20 +411,39 @@ export function ItemEditor({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showNumber, setShowNumber] = useState(false);
+  const [showTotp, setShowTotp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(isNew);
+  const readOnly = !editing;
 
   const meta = ITEM_TYPE_META[type];
 
-  const update = (patch: Partial<Draft>): void => setDraft((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<Draft>): void => {
+    if (readOnly) return;
+    setDraft((current) => ({ ...current, ...patch }));
+  };
 
   const save = (): void => {
     if (draft.name.trim().length === 0) {
       setError("A name is required");
       return;
     }
+    if (draft.totp.trim().length > 0 && normalizeTotpSecret(draft.totp) === null) {
+      setError("The authenticator secret is not valid. Paste the key or the full otpauth:// link.");
+      return;
+    }
     setError(null);
-    void onSave(type, toPayload(type, draft));
+    void onSave(type, toPayload(type, draft))
+      .then(() => setEditing(false))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not save"));
+  };
+
+  const cancelEdit = (): void => {
+    setDraft(toDraft(type, payload));
+    setError(null);
+    setConfirmDelete(false);
+    setEditing(false);
   };
 
   const remove = (): void => {
@@ -430,16 +456,18 @@ export function ItemEditor({
   };
 
   return (
+    <EditorReadOnly.Provider value={readOnly}>
     <section className="editor" aria-label={isNew ? `New ${meta.label}` : `Edit ${meta.label}`}>
       <header className="editor-head">
         <div className="editor-head-main">
-          <span className="label">{isNew ? `New ${meta.label}` : meta.label}</span>
+          <span className="label">{isNew ? `New ${meta.label}` : readOnly ? meta.label : `Edit ${meta.label}`}</span>
           <input
             className="editor-title-input"
             type="text"
             value={draft.name}
             placeholder="Untitled"
             aria-label="Title"
+            readOnly={readOnly}
             onChange={(event) => update({ name: event.target.value })}
           />
         </div>
@@ -460,6 +488,7 @@ export function ItemEditor({
           <select
             className="input select"
             value={draft.folderId}
+            disabled={readOnly}
             onChange={(event) => update({ folderId: event.target.value })}
           >
             <option value="">No folder</option>
@@ -475,6 +504,7 @@ export function ItemEditor({
             <input
               type="checkbox"
               checked={draft.autofill}
+              disabled={readOnly}
               onChange={(event) => update({ autofill: event.target.checked })}
             />
             <span>
@@ -513,14 +543,16 @@ export function ItemEditor({
                   {showPassword ? <EyeOffIcon size={15} /> : <EyeIcon size={15} />}
                 </button>
                 <CopyButton value={draft.password} compact title="Copy password" />
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => update({ password: generatePassword() })}
-                >
-                  <DicesIcon size={15} />
-                  <span>Generate</span>
-                </button>
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => update({ password: generatePassword() })}
+                  >
+                    <DicesIcon size={15} />
+                    <span>Generate</span>
+                  </button>
+                ) : null}
               </div>
               <StrengthMeter password={draft.password} showBits />
             </div>
@@ -531,30 +563,51 @@ export function ItemEditor({
                 rows={2}
                 value={draft.urls}
                 placeholder="https://example.com"
+                readOnly={readOnly}
                 onChange={(event) => update({ urls: event.target.value })}
               />
             </label>
             <div className="field">
               <span className="label">Authenticator secret</span>
-              <div className="secret-input">
-                <input
-                  className="input input-mono"
-                  type="text"
-                  value={draft.totp}
-                  placeholder="Base32 secret"
-                  autoComplete="off"
-                  onChange={(event) => update({ totp: event.target.value })}
-                />
-                <CopyButton value={draft.totp} compact title="Copy secret" />
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => update({ totp: generateTotpSecret() })}
-                >
-                  <SparkIcon size={15} />
-                  <span>Add authenticator</span>
-                </button>
-              </div>
+              {readOnly ? (
+                <div className="secret-input">
+                  <span className="masked-value mono">
+                    {draft.totp.trim().length > 0 ? maskSecret(draft.totp) : "Not set"}
+                  </span>
+                  {draft.totp.trim().length > 0 ? (
+                    <CopyButton value={draft.totp} compact title="Copy secret" />
+                  ) : null}
+                </div>
+              ) : (
+                <div className="secret-input">
+                  <input
+                    className="input input-mono"
+                    type={showTotp ? "text" : "password"}
+                    value={draft.totp}
+                    placeholder="Base32 secret or otpauth:// link"
+                    autoComplete="off"
+                    onChange={(event) => update({ totp: event.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={showTotp ? "Hide authenticator secret" : "Show authenticator secret"}
+                    title={showTotp ? "Hide" : "Show"}
+                    onClick={() => setShowTotp((current) => !current)}
+                  >
+                    {showTotp ? <EyeOffIcon size={15} /> : <EyeIcon size={15} />}
+                  </button>
+                  <CopyButton value={draft.totp} compact title="Copy secret" />
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => update({ totp: generateTotpSecret() })}
+                  >
+                    <SparkIcon size={15} />
+                    <span>Add authenticator</span>
+                  </button>
+                </div>
+              )}
               {draft.totp.trim().length > 0 ? <TotpRow secret={draft.totp} nowMs={nowMs} /> : null}
             </div>
             <label className="field">
@@ -563,6 +616,7 @@ export function ItemEditor({
                 className="input textarea"
                 rows={3}
                 value={draft.notes}
+                readOnly={readOnly}
                 onChange={(event) => update({ notes: event.target.value })}
               />
             </label>
@@ -574,6 +628,7 @@ export function ItemEditor({
                     className="input"
                     value={field.name}
                     placeholder="Field name"
+                    readOnly={readOnly}
                     onChange={(event) => {
                       const customFields = draft.customFields.map((entry, entryIndex) =>
                         entryIndex === index ? { ...entry, name: event.target.value } : entry,
@@ -585,6 +640,7 @@ export function ItemEditor({
                     className="input input-mono"
                     value={field.value}
                     placeholder="Value"
+                    readOnly={readOnly}
                     onChange={(event) => {
                       const customFields = draft.customFields.map((entry, entryIndex) =>
                         entryIndex === index ? { ...entry, value: event.target.value } : entry,
@@ -593,25 +649,29 @@ export function ItemEditor({
                     }}
                   />
                   <CopyButton value={field.value} compact title="Copy value" />
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    aria-label="Remove custom field"
-                    title="Remove field"
-                    onClick={() => update({ customFields: draft.customFields.filter((_, i) => i !== index) })}
-                  >
-                    <XIcon size={15} />
-                  </button>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label="Remove custom field"
+                      title="Remove field"
+                      onClick={() => update({ customFields: draft.customFields.filter((_, i) => i !== index) })}
+                    >
+                      <XIcon size={15} />
+                    </button>
+                  ) : null}
                 </div>
               ))}
-              <button
-                type="button"
-                className="btn btn-quiet"
-                onClick={() => update({ customFields: [...draft.customFields, { name: "", value: "" }] })}
-              >
-                <PlusIcon size={15} />
-                <span>Add field</span>
-              </button>
+              {!readOnly ? (
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() => update({ customFields: [...draft.customFields, { name: "", value: "" }] })}
+                >
+                  <PlusIcon size={15} />
+                  <span>Add field</span>
+                </button>
+              ) : null}
             </div>
           </>
         ) : null}
@@ -619,12 +679,13 @@ export function ItemEditor({
         {type === "note" ? (
           <label className="field">
             <span className="label">Notes</span>
-            <textarea
-              className="input textarea"
-              rows={10}
-              value={draft.notes}
-              onChange={(event) => update({ notes: event.target.value })}
-            />
+              <textarea
+                className="input textarea"
+                rows={10}
+                value={draft.notes}
+                readOnly={readOnly}
+                onChange={(event) => update({ notes: event.target.value })}
+              />
           </label>
         ) : null}
 
@@ -646,6 +707,7 @@ export function ItemEditor({
                     value={draft.number}
                     placeholder="0000 0000 0000 0000"
                     autoComplete="off"
+                    readOnly={readOnly}
                     onChange={(event) => update({ number: event.target.value })}
                   />
                 ) : (
@@ -689,6 +751,7 @@ export function ItemEditor({
                 className="input textarea"
                 rows={3}
                 value={draft.notes}
+                readOnly={readOnly}
                 onChange={(event) => update({ notes: event.target.value })}
               />
             </label>
@@ -719,6 +782,7 @@ export function ItemEditor({
                 className="input textarea"
                 rows={3}
                 value={draft.notes}
+                readOnly={readOnly}
                 onChange={(event) => update({ notes: event.target.value })}
               />
             </label>
@@ -743,6 +807,7 @@ export function ItemEditor({
                 rows={3}
                 value={draft.publicKey}
                 placeholder="ssh-ed25519 AAAA..."
+                readOnly={readOnly}
                 onChange={(event) => update({ publicKey: event.target.value })}
               />
             </label>
@@ -754,6 +819,7 @@ export function ItemEditor({
                   rows={4}
                   value={draft.privateKey}
                   placeholder={showPassword ? "-----BEGIN OPENSSH PRIVATE KEY-----" : "Hidden"}
+                  readOnly={readOnly}
                   onChange={(event) => update({ privateKey: event.target.value })}
                 />
                 <button
@@ -782,6 +848,7 @@ export function ItemEditor({
                 className="input textarea"
                 rows={3}
                 value={draft.notes}
+                readOnly={readOnly}
                 onChange={(event) => update({ notes: event.target.value })}
               />
             </label>
@@ -811,14 +878,16 @@ export function ItemEditor({
                   {showPassword ? <EyeOffIcon size={15} /> : <EyeIcon size={15} />}
                 </button>
                 <CopyButton value={draft.key} compact title="Copy API key" />
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => update({ key: generatePassword({ length: 40, symbols: false }) })}
-                >
-                  <DicesIcon size={15} />
-                  <span>Generate</span>
-                </button>
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => update({ key: generatePassword({ length: 40, symbols: false }) })}
+                  >
+                    <DicesIcon size={15} />
+                    <span>Generate</span>
+                  </button>
+                ) : null}
               </div>
             </div>
             <Field
@@ -835,6 +904,7 @@ export function ItemEditor({
                 className="input textarea"
                 rows={3}
                 value={draft.notes}
+                readOnly={readOnly}
                 onChange={(event) => update({ notes: event.target.value })}
               />
             </label>
@@ -870,6 +940,7 @@ export function ItemEditor({
                   rows={3}
                   value={draft.privateKey}
                   placeholder={showPassword ? "PKCS#8 key (base64url)" : "Hidden"}
+                  readOnly={readOnly}
                   onChange={(event) => update({ privateKey: event.target.value })}
                 />
                 <button
@@ -891,6 +962,7 @@ export function ItemEditor({
                 rows={2}
                 value={draft.publicKey}
                 placeholder="COSE key (base64url)"
+                readOnly={readOnly}
                 onChange={(event) => update({ publicKey: event.target.value })}
               />
             </label>
@@ -910,6 +982,7 @@ export function ItemEditor({
                 className="input textarea"
                 rows={3}
                 value={draft.notes}
+                readOnly={readOnly}
                 onChange={(event) => update({ notes: event.target.value })}
               />
             </label>
@@ -918,10 +991,25 @@ export function ItemEditor({
       </div>
 
       <footer className="editor-actions">
-        <button type="button" className="btn btn-primary" onClick={save} disabled={busy}>
-          <CheckIcon size={16} />
-          <span>Save</span>
-        </button>
+        {editing ? (
+          <>
+            <button type="button" className="btn btn-primary" onClick={save} disabled={busy}>
+              <CheckIcon size={16} />
+              <span>Save</span>
+            </button>
+            {!isNew ? (
+              <button type="button" className="btn btn-quiet" onClick={cancelEdit} disabled={busy}>
+                <XIcon size={16} />
+                <span>Cancel</span>
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <button type="button" className="btn btn-primary" onClick={() => setEditing(true)} disabled={busy}>
+            <PencilIcon size={16} />
+            <span>Edit</span>
+          </button>
+        )}
         {onDelete !== null ? (
           <button
             type="button"
@@ -939,5 +1027,6 @@ export function ItemEditor({
         </button>
       </footer>
     </section>
+    </EditorReadOnly.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { computeTotp, totpSecondsRemaining } from "@toasty/crypto";
+import { computeTotp, parseTotpSettings, totpSecondsRemaining } from "@toasty/crypto";
 import { api } from "./lib/api";
 import type { VersionStatusResponse } from "./lib/api";
 
@@ -43,30 +43,39 @@ export function useNowMs(intervalMs = 1000): number {
 export interface TotpState {
   code: string | null;
   secondsRemaining: number;
+  error: string | null;
+  period: number;
 }
 
 export function useTotpCode(secret: string, nowMs: number): TotpState {
-  const windowIndex = Math.floor(nowMs / (TOTP_PERIOD_SECONDS * 1000));
+  const settings = parseTotpSettings(secret);
+  const period = settings?.period ?? TOTP_PERIOD_SECONDS;
+  const windowIndex = Math.floor(nowMs / (period * 1000));
   const [code, setCode] = useState<string | null>(null);
-  const trimmed = secret.trim();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (trimmed.length === 0) {
+    if (settings === null) {
       setCode(null);
+      setError(secret.trim().length > 0 ? "Not a valid authenticator secret" : null);
       return;
     }
+    setError(null);
     let cancelled = false;
-    computeTotp(trimmed)
+    computeTotp(settings.secret, Date.now(), settings.period, settings.digits, settings.algorithm)
       .then((value) => {
         if (!cancelled) setCode(value);
       })
       .catch(() => {
-        if (!cancelled) setCode(null);
+        if (!cancelled) {
+          setCode(null);
+          setError("Not a valid authenticator secret");
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [trimmed, windowIndex]);
+  }, [settings?.secret, settings?.period, settings?.digits, settings?.algorithm, windowIndex]);
 
-  return { code, secondsRemaining: totpSecondsRemaining(TOTP_PERIOD_SECONDS, nowMs) };
+  return { code, secondsRemaining: totpSecondsRemaining(period, nowMs), error, period };
 }
