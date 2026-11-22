@@ -24,6 +24,7 @@ jobs:
       - name: Install dependencies & build web vault for mobile
         run: |
           npm ci --include=dev
+          npm run build:crypto
           npm run build:mobile --prefix apps/web
 
       - name: Copy web bundle into iOS app resources

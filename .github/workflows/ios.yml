@@ -26,7 +26,9 @@ jobs:
         run: npm ci --include=dev
 
       - name: Build web vault for mobile
-        run: npm run build:mobile --workspace=@toasty/web
+        run: |
+          npm run build:crypto
+          npm run build:mobile --workspace=@toasty/web
 
       - name: Copy web bundle into the iOS app
         run: |
