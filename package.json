@@ -10,14 +10,12 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @toasty/crypto && npm run build -w @toasty/icons && npm run build -w @toasty/server && npm run build -w @toasty/web && npm run build -w @toasty/extension",
+    "build": "npm run build -w @toasty/crypto && npm run build -w @toasty/icons && npm run build -w @toasty/server && npm run build -w @toasty/web",
     "build:crypto": "npm run build -w @toasty/crypto && npm run build -w @toasty/icons",
-    "build:site": "npm run build -w @toasty/site",
-    "typecheck": "npm run typecheck -w @toasty/crypto && npm run typecheck -w @toasty/icons && npm run typecheck -w @toasty/server && npm run typecheck -w @toasty/web && npm run typecheck -w @toasty/extension",
+    "typecheck": "npm run typecheck -w @toasty/crypto && npm run typecheck -w @toasty/icons && npm run typecheck -w @toasty/server && npm run typecheck -w @toasty/web",
     "test": "npm run build:crypto && npm run test -w @toasty/crypto && npm run test -w @toasty/server",
     "dev:server": "npm run dev -w @toasty/server",
-    "dev:web": "npm run dev -w @toasty/web",
-    "dev:site": "npm run dev -w @toasty/site"
+    "dev:web": "npm run dev -w @toasty/web"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

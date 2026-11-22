@@ -129,12 +129,6 @@ shows a one-time setup wizard instead of a login page.
    multi-user instance with open sign-ups, set `ALLOW_REGISTRATION=true` in `.env`
    and restart the app.
 
-## Connecting the browser extension
-
-The store extension works with any Toasty server: open the extension's **Options**
-page, set **Server URL** to `https://your-domain`, and sign in. Details in
-[docs/extension.md](docs/extension.md).
-
 ## Backups
 
 The database contains only ciphertext, so a plain `pg_dump` is safe to store
@@ -193,7 +187,6 @@ Caddy:
 | Migration errors in app logs on upgrade | Old dump restored over a newer schema, or a half-applied migration | Restore the pre-upgrade backup, `git pull` to a consistent revision, restart; migrations are tracked in `schema_migrations` |
 | Certificate issuance fails in Caddy logs | DNS not pointing at the server, or port 80 blocked | Verify DNS with `dig your-domain`, open 80/443 in the firewall |
 | Cloudflare `Error 526: Invalid SSL certificate` | The domain is proxied (orange cloud) and Cloudflare rejects the origin cert — Caddy's HTTP-01 challenge can't complete behind the proxy, so it falls back to a self-signed cert | Either set the DNS record to **DNS only** (grey cloud) so Caddy issues a real Let's Encrypt certificate, or keep the proxy and set Cloudflare SSL/TLS to **Full (strict)** with a Cloudflare Origin Certificate in front of Caddy |
-| Extension can't reach the server | Server URL wrong or mixed content | Use the exact `https://` origin in the extension's Options |
 
 ## Resource footprint
 

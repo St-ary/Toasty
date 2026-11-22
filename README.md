@@ -2,42 +2,15 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-8B5E34.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-C68B59.svg)
 
-# Toasty — warm, zero-knowledge password management
+# Toasty — self-hosted, zero-knowledge password manager
 
-Toasty is the open-source password manager you can host yourself in minutes. Every
-password, note, and card is encrypted on your device with AES-256-GCM before it ever
-touches the network — the server only ever stores ciphertext, so even a fully
-compromised server reveals nothing without your master password. The project's guide
-site — what Toasty is and how to download and self-host it — lives at
-[toasty.stary.lol](https://toasty.stary.lol). This repository is the product:
-API, web vault, browser extension, mobile apps, shared crypto, and the Docker
-setup to run it all.
+Toasty is a password manager you host yourself. Passwords, notes, and cards are
+encrypted on your device with AES-256-GCM before upload — the server stores only
+ciphertext, so even a fully compromised server reveals nothing without your
+master password.
 
-## Feature highlights
-
-- **Zero-knowledge encryption** — AES-256-GCM for every item, keys derived with
-  PBKDF2-HMAC-SHA-512 at 600,000 iterations. Master passwords never leave the device.
-- **Self-host with one Docker command** — Postgres + one app container + Caddy for
-  automatic TLS, with a guided one-time setup. See
-  [docs/self-hosting.md](docs/self-hosting.md).
-- **Browser extension with autofill and remember** — fill logins on any site, save new
-  ones as you log in, and see or copy TOTP codes right where you sign in. Chrome,
-  Firefox, and Edge.
-- **Generators in the popup** — strong passwords, usernames, and passphrases whenever
-  you need a fresh secret.
-- **Encrypted backups** — dump the database any time; the dump contains only
-  ciphertext and key-wrapping material.
-- **White and dark mode** — a warm "Cinnamon Toast Crunch" theme in white, and a deep
-  roast dark mode for the night shift.
-- **Works offline** — clients cache the encrypted vault locally, so it keeps working
-  with no connection and syncs when you're back.
-
-## Two ways to use Toasty
-
-| Way | What it is | Where |
-| --- | --- | --- |
-| **Self-host** | Run this repo yourself with Docker. Your data, your server, your rules. | This repository, [docs/self-hosting.md](docs/self-hosting.md) |
-| **Browser extension** | Store-distributed (Chrome Web Store / Firefox AMO / Edge); works with any Toasty server you configure. | [docs/extension.md](docs/extension.md) |
+This repository is the vault: the API server, the web vault, the shared crypto,
+and the Docker setup to run it.
 
 ## Quickstart
 
@@ -60,6 +33,24 @@ the instance is private from then on; set `ALLOW_REGISTRATION=true` in `.env` if
 want open sign-ups. The full walkthrough — TLS, backups, upgrades, troubleshooting —
 is in [docs/self-hosting.md](docs/self-hosting.md).
 
+## Repository layout
+
+| Path | What it is |
+| --- | --- |
+| `apps/server` | Node API (`@toasty/server`) — also serves the built web vault in production |
+| `apps/web` | Web vault (`@toasty/web`) — the vault's browser interface |
+| `packages/crypto` | Shared zero-knowledge crypto (`@toasty/crypto`) |
+| `docs/` | Self-hosting, API, and security documentation |
+| `docker/` | Dockerfile and Caddyfile |
+
+## Documentation
+
+| Document | Covers |
+| --- | --- |
+| [docs/self-hosting.md](docs/self-hosting.md) | Running Toasty yourself with Docker |
+| [docs/api.md](docs/api.md) | API contract and server environment variables |
+| [docs/security.md](docs/security.md) | The zero-knowledge model, in detail |
+
 ## Local development
 
 ```bash
@@ -73,29 +64,6 @@ The dev server reads the environment variables documented in
 [docs/api.md](docs/api.md) (at minimum `DATABASE_URL`); the web dev server proxies
 `/api` to `http://localhost:8787`.
 
-## Repository layout
-
-| Path | What it is |
-| --- | --- |
-| `apps/server` | Node API (`@toasty/server`) — also serves the built web vault in production |
-| `apps/web` | Web vault SPA (`@toasty/web`) |
-| `apps/extension` | Browser extension (`@toasty/extension`) |
-| `packages/crypto` | Shared zero-knowledge crypto (`@toasty/crypto`) |
-| `docs/` | Documentation |
-| `docker/` | Dockerfile and Caddyfile |
-
-## Documentation
-
-| Document | Covers |
-| --- | --- |
-| [docs/self-hosting.md](docs/self-hosting.md) | Running Toasty yourself with Docker |
-| [docs/extension.md](docs/extension.md) | Browser extension: install, configure, submit to stores |
-| [docs/mobile.md](docs/mobile.md) | Mobile apps (iOS + Android) with autofill |
-| [docs/github-workflow.md](docs/github-workflow.md) | Issues, forks, PRs, CI, releases |
-| [docs/api.md](docs/api.md) | API contract and server environment variables |
-| [docs/security.md](docs/security.md) | The zero-knowledge model, in detail |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute code |
-
 ## Security
 
 Toasty is zero-knowledge end to end: your master password derives a key on your
@@ -108,16 +76,9 @@ threat model, and non-guarantees are documented in
 
 ## Contributing
 
-Bug reports, feature ideas, and pull requests are welcome. Start with
-[docs/github-workflow.md](docs/github-workflow.md) for the GitHub workflow and
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup and style rules.
-
-## Roadmap
-
-1. Web vault + browser extension: built, heading into beta.
-2. Beta testing with real users on self-hosted instances.
-3. **Mobile app (iOS + Android) after the beta** — same crypto, same API. See
-   [docs/mobile.md](docs/mobile.md).
+Bug reports, feature ideas, and pull requests are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/github-workflow.md](docs/github-workflow.md).
 
 ## License
 

@@ -1,7 +1,7 @@
 # Toasty API & Integration Contract
 
-This document is the single source of truth for how `@toasty/server`, `@toasty/web`, and
-`@toasty/extension` talk to each other. All three MUST implement exactly this contract.
+This document is the single source of truth for how `@toasty/server` and `@toasty/web`
+talk to each other. Both MUST implement exactly this contract.
 
 ## Topology
 
@@ -9,8 +9,6 @@ This document is the single source of truth for how `@toasty/server`, `@toasty/w
 - In production the server also serves the built web app from `STATIC_DIR` (SPA fallback
   to `index.html`), so a deployment is just: Postgres + one app container + Caddy.
 - In development, `vite dev` proxies `/api` to `http://localhost:8787`.
-- The extension talks to the same API on a configurable base URL (default
-  `https://vault.stary.lol`), so it works against the hosted vault and self-hosted ones.
 
 ## Zero-knowledge rules
 

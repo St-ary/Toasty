@@ -14,7 +14,9 @@ coverage
 *.log
 *.tsbuildinfo
 .DS_Store
-apps/extension/release
+apps/extension
+apps/mobile
+apps/site
 docs
 infra
 docker-compose.yml

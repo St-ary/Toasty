@@ -104,8 +104,6 @@ Maintainers cut releases periodically:
 2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
 3. Publish a GitHub Release with notes (features, fixes, breaking changes).
 4. Publish the Docker image tagged `ghcr.io/stary/toasty:0.2.0` and `:latest`.
-5. Browser extension releases go through the stores — see
-   [docs/extension.md](docs/extension.md).
 
 ## Keep your fork in sync
 

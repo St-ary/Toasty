@@ -23,7 +23,7 @@ What you expected to happen instead.
 **Environment**
 
 - Deployment: self-hosted / vault.stary.lol
-- Client: web vault / extension (Chrome / Firefox / Edge)
+- Client: web vault
 - Toasty version or commit:
 - OS:
 

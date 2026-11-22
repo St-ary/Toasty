@@ -9,7 +9,6 @@ COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/crypto/package.json packages/crypto/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-COPY apps/extension/package.json apps/extension/
 RUN npm ci --include=dev
 
 COPY packages/ packages/
@@ -27,7 +26,6 @@ COPY package.json package-lock.json ./
 COPY packages/crypto/package.json packages/crypto/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-COPY apps/extension/package.json apps/extension/
 RUN npm ci --omit=dev && npm cache clean --force
 
 # ---- Stage 3: runtime -------------------------------------------------------

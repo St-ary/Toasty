@@ -48,19 +48,16 @@ re-wraps the vault key but leaves the recovery wrap untouched.
   metadata (item count, sizes, timestamps, account email).
 - The web app runs its JS from the server origin: a malicious server operator could
   serve modified client code that exfiltrates the master password at login time.
-  Security-critical users should prefer the store-distributed extension or verify the
-  self-hosted build (the extension's code is what the browser store reviewed).
+  Security-critical users should verify the self-hosted build matches this source.
 - XSS in the web vault would be catastrophic; all item data is rendered as text
   (React default escaping), never `dangerouslySetInnerHTML`.
 - No plaintext secrets in logs; the server logs method/path/status only.
 
-## Client caching (web + extension)
+## Client caching
 
-Clients cache ciphertext blobs locally (localStorage / `chrome.storage.local`) so the
-vault works offline. Cached data is exactly what the server holds (still encrypted);
-decrypted material lives only in memory while unlocked. The extension keeps the derived
-vault key in `chrome.storage.session` (memory-only, cleared on browser exit) and
-auto-locks after the configured idle timeout (default 15 minutes).
+The web vault caches ciphertext blobs locally (localStorage) so the vault works
+offline. Cached data is exactly what the server holds (still encrypted);
+decrypted material lives only in memory while unlocked.
 
 ## Cryptographic implementation notes
 
@@ -74,4 +71,4 @@ All client crypto uses WebCrypto (native, constant-time implementations):
   character classes.
 
 Shared implementation: `packages/crypto` (`@toasty/crypto`) — used verbatim by the web
-app and the browser extension so both sides encrypt identically.
+vault.
