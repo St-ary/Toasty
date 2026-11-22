@@ -1,6 +1,9 @@
 ![CI](https://github.com/St-ary/Toasty/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-8B5E34.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-C68B59.svg)
+![Warning](https://img.shields.io/badge/⚠️-Toasty_is_in_beta_--_expect_bugs-C68B59.svg)
+
+
 
 # Toasty — self-hosted, zero-knowledge password manager
 
