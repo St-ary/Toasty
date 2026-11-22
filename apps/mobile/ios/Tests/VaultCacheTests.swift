@@ -40,4 +40,14 @@ final class VaultCacheTests: XCTestCase {
         let e = entry(name: "Multi", urls: ["https://a.example.com", "https://b.other.com"])
         XCTAssertTrue(e.matches(domain: "other.com"))
     }
+
+    func testMatchesAppBundleIdByReverseDns() {
+        let e = entry(name: "Discord", urls: ["https://discord.com"])
+        XCTAssertTrue(e.matches(domain: "com.discord"))
+    }
+
+    func testAppBundleIdGuessDoesNotOvermatch() {
+        let e = entry(name: "Example", urls: ["https://example.com"])
+        XCTAssertFalse(e.matches(domain: "com.evil"))
+    }
 }

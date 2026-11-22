@@ -121,17 +121,16 @@ object VaultCache {
     }
 
     fun matches(entry: Entry, domain: String?, packageName: String): Boolean {
-        if (domain != null) {
-            val host = domain.lowercase().removePrefix("www.")
-            if (entry.urls.any { url ->
-                    val u = url.lowercase().removePrefix("https://").removePrefix("http://")
-                        .removePrefix("www.").substringBefore("/").substringBefore(":")
-                    u == host || u.endsWith(".$host") || host.endsWith(".$u")
-                }
-            ) {
-                return true
-            }
+        val hosts = mutableListOf<String>()
+        if (domain != null) hosts += domain.lowercase().removePrefix("www.")
+        // Native apps identify themselves by package name; guess the domain by
+        // reversing it (com.discord -> discord.com) so saved URLs match.
+        hosts += packageName.lowercase()
+        hosts += packageName.lowercase().split(".").reversed().joinToString(".")
+        return entry.urls.any { url ->
+            val u = url.lowercase().removePrefix("https://").removePrefix("http://")
+                .removePrefix("www.").substringBefore("/").substringBefore(":")
+            hosts.any { host -> u == host || u.endsWith(".$host") || host.endsWith(".$u") }
         }
-        return entry.urls.any { it.contains(packageName, ignoreCase = true) }
     }
 }

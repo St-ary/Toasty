@@ -72,16 +72,31 @@ enum VaultCache {
         let urls: [String]
 
         func matches(domain: String) -> Bool {
-            let host = domain.lowercased().replacingOccurrences(of: "www.", with: "")
+            let hosts = Entry.hostCandidates(from: domain)
             return urls.contains { url in
-                let cleaned = url.lowercased()
-                    .replacingOccurrences(of: "https://", with: "")
-                    .replacingOccurrences(of: "http://", with: "")
-                    .replacingOccurrences(of: "www.", with: "")
-                let hostPart = cleaned.split(separator: "/").first.map(String.init) ?? cleaned
-                let bare = hostPart.split(separator: ":").first.map(String.init) ?? hostPart
-                return bare == host || bare.hasSuffix(".\(host)") || host.hasSuffix(".\(bare)")
+                let bare = Entry.bareHost(of: url)
+                return hosts.contains { host in
+                    bare == host || bare.hasSuffix(".\(host)") || host.hasSuffix(".\(bare)")
+                }
             }
+        }
+
+        static func bareHost(of raw: String) -> String {
+            let cleaned = raw.lowercased()
+                .replacingOccurrences(of: "https://", with: "")
+                .replacingOccurrences(of: "http://", with: "")
+                .replacingOccurrences(of: "www.", with: "")
+            let hostPart = cleaned.split(separator: "/").first.map(String.init) ?? cleaned
+            return hostPart.split(separator: ":").first.map(String.init) ?? hostPart
+        }
+
+        /// Host forms to try for a service identifier: the host itself plus a
+        /// reverse-DNS guess (com.discord -> discord.com) so native app bundle
+        /// IDs match saved URLs.
+        static func hostCandidates(from domain: String) -> [String] {
+            let bare = bareHost(of: domain)
+            let reversed = bare.split(separator: ".").reversed().joined(separator: ".")
+            return bare == reversed ? [bare] : [bare, reversed]
         }
     }
 }
