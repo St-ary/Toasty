@@ -70,6 +70,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: lol.stary.toasty.tests
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "5.0"
 
 schemes:
