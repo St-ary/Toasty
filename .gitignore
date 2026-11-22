@@ -35,3 +35,7 @@ apps/mobile/ios/App/App/public/
 apps/mobile/ios/Toasty.xcodeproj/
 *.ipa
 Payload/
+
+# Shipped downloadables (user-provided release binaries).
+!Mobile/*.ipa
+!Mobile/*.apk
