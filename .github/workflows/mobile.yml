@@ -1,0 +1,60 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - '.github/workflows/mobile.yml'
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies & build web vault for mobile
+        run: |
+          npm ci --include=dev
+          npm run build:mobile --prefix apps/web
+
+      - name: Copy web bundle into iOS app resources
+        run: |
+          rm -rf apps/mobile/ios/App/App/public
+          mkdir -p apps/mobile/ios/App/App/public
+          cp -r apps/web/dist/. apps/mobile/ios/App/App/public/
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project & build unsigned IPA
+        working-directory: apps/mobile/ios
+        run: |
+          xcodegen generate
+          xcodebuild -project Toasty.xcodeproj \
+            -scheme Toasty \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/Toasty.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+          mkdir -p build/Payload
+          cp -r build/Toasty.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r Toasty.ipa Payload
+
+      - name: Upload Toasty.ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Toasty-iOS
+          path: apps/mobile/ios/build/Toasty.ipa
