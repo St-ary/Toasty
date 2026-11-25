@@ -3,7 +3,7 @@
 ![Docker](https://img.shields.io/badge/docker-ready-C68B59.svg)
 ![Warning](https://img.shields.io/badge/⚠️-Toasty_is_in_beta_--_expect_bugs-C68B59.svg)
 
-
+**Currently don’t have my pc anymore to test or fix bugs so I’ll add a support page to toasty.stary.lol/support for reporting bugs and errors**
 
 # Toasty — self-hosted, zero-knowledge password manager
 
